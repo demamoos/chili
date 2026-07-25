@@ -1,0 +1,31 @@
+{
+  "name": "chili-app",
+  "version": "1.0.0",
+  "description": "Chili — Telegram Mini App для досуга с крипто-оплатой",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix"
+  },
+  "dependencies": {
+    "@telegram-apps/sdk": "^2.0.0",
+    "@tonconnect/ui": "^2.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "eslint": "^8.57.0",
+    "globals": "^14.0.0"
+  },
+  "keywords": [
+    "telegram-mini-app",
+    "ton",
+    "crypto",
+    "activities",
+    "web3"
+  ],
+  "author": "Chili Team",
+  "license": "MIT"
+}
