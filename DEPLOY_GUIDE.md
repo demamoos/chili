@@ -57,15 +57,14 @@ Value: (Вставь сюда токен от @BotFather, например 12345
 ### Ошибка 2: `Missing entry-point to Worker script or to assets directory`
 **Причина:** В корне проекта лежит файл `wrangler.toml`. При автодеплое через Dashboard Cloudflare думает, что это чистый Worker, а не Pages-проект, и ищет точку входа в скрипт.
 **Решение:** Удалить `wrangler.toml` из репозитория. Cloudflare Dashboard автоматически найдет папку `/functions` для бэкенда без этого файла.
-```bash
 rm wrangler.toml
 git push origin main
-Ошибка 3: The version of Vite used in the project ("5.x") cannot be automatically configured. Please update the Vite version to at least "6.0.0"
+### Ошибка 3: The version of Vite used in the project ("5.x") cannot be automatically configured. Please update the Vite version to at least "6.0.0"
 Причина: Cloudflare жестко проверяет версию Vite, если в Framework preset выбрано Vite.
 Решение (Самое простое): Зайди в Settings -> Builds & deployments -> измени Framework preset на None. Cloudflare перестанет проверять версию и просто запустит вашу команду сборки.
 Решение (Если хотите Vite 6): Обновите Vite локально npm install vite@latest --save-dev, но будьте готовы к Ошибкам 4 и 5.
 
-Ошибка 4 (Если обновились до Vite 6): TypeError: manualChunks is not a function
+### Ошибка 4 (Если обновились до Vite 6): TypeError: manualChunks is not a function
 Причина: Vite 6 сменил движок сборки на Rolldown. Он не понимает manualChunks в виде объекта (как было в Vite 5), требует функцию.
 Решение: В vite.config.js перепишите блок rollupOptions.output:
 
@@ -80,7 +79,7 @@ manualChunks(id) {
     return 'vendor';
   }
 }
-Ошибка 5 (Если обновились до Vite 6): Cannot modify Vite config: could not find a valid plugins array
+### Ошибка 5 (Если обновились до Vite 6): Cannot modify Vite config: could not find a valid plugins array
 Причина: Cloudflare пытается внедрить свои плагины в ваш vite.config.js, но если там нет массива plugins, скрипт падает.
 Решение: Добавьте пустой массив плагинов в vite.config.js:
 
@@ -91,7 +90,7 @@ export default defineConfig({
   base: '/',
   // ... остальной код
 });
-Ошибка 6: Invalid _redirects configuration: Infinite loop detected
+### Ошибка 6: Invalid _redirects configuration: Infinite loop detected
 Причина: Файл public/_redirects содержит правило /* /index.html 200. Новый строгий парсер Cloudflare считает это бесконечным циклом (запрос /index.html попадает под правило /* и пытается редиректить на себя).
 Решение: Удалить файл public/_redirects. Современный Cloudflare Pages автоматически понимает, что Vite-проекты — это SPA, и если файла /friends.html нет, он сам отдаст /index.html (статус 200). Роутер в JS всё сделает сам.
 
