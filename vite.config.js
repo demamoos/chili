@@ -8,8 +8,11 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['@telegram-apps/sdk', '@tonconnect/ui']
+        // ✅ Новый формат для Vite 6 (функция вместо объекта)
+        manualChunks(id) {
+          if (id.includes('@telegram-apps/sdk') || id.includes('@tonconnect/ui')) {
+            return 'vendor';
+          }
         }
       }
     }
