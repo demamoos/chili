@@ -1,229 +1,119 @@
-# 🚀 Деплой Chili на Cloudflare Pages + Telegram Mini App
-
-## Шаг 1: Cloudflare Setup (5 мин)
-
+# 🚀 Деплой Chili на Cloudflare Pages + Telegram Mini App (GitHub Edition)
+## Важное замечание по структуре проекта
+Для успешного деплоя на Cloudflare Pages проект должен иметь следующую структуру:
+* /src/ — исходный код Frontend (Vite собирает его в папку /dist/)
+* /public/ — статичные файлы (manifest, sw.js, _headers). Vite автоматически копирует их в /dist/
+* /functions/ — Backend API (Cloudflare автоматически превращает папку /functions в серверный бэкенд)
+* НЕ НУЖНЫ: wrangler.toml (мешает автодеплою) и _redirects (вызывает бесконечный цикл, CF Pages сам понимает SPA).
+## Шаг 1: Cloudflare Setup
 ### 1.1 Создать аккаунт
-- [dash.cloudflare.com](https://dash.cloudflare.com) → Sign up
+Зайди на dash.cloudflare.com → Sign up.
+### 1.2 Подключить GitHub к Cloudflare Pages
+В левом меню Cloudflare нажми Workers & Pages.
+Нажми Create application → вкладка Pages → Connect to Git.
+Авторизуй GitHub и выбери репозиторий chili-project.
+### 1.3 Настройки сборки (Build settings)
+Project name: chili-app (это определит ваш URL: chili-app.pages.dev)
+Production branch: main
+Framework preset: None (Важно! Если выбрать Vite, CF может потребовать версию 6.0.0+ и сломать сборку. None — самый надежный путь).
+Build command: npm run build
+Build output directory: dist
+В разделе Environment variables нажми Add variable:
+NODE_VERSION = 20 (Критически важно! Без этого Vite 5/6 падает на старых версиях Node).
+Нажми Save and Deploy.
+## Шаг 2: Добавить BOT_TOKEN (Обязательно!)
+Без этого ваш бэкенд /api/auth не сможет валидировать Telegram initData и будет падать.
 
-### 1.2 Создать Pages проект
-1. **Pages** → **Create a project**
-2. **Connect to Git** → выбрать GitLab репозиторий `chili-project`
-3. **Build settings**:
-   ```
-   Build command:    npm run build
-   Build output:     dist
-   Root directory:   /
-   ```
-4. **Environment variables** (необязательно для начала):
-   ```
-   NODE_VERSION = 20
-   ```
-5. **Save and Deploy**
-
-### 1.3 Получить API Token для CI/CD
-1. Cloudflare Dashboard → **My Profile** (иконка в правом верхнем углу)
-2. **API Tokens** → **Create Token**
-3. **Custom token**:
-   - **Token name**: `GitLab CI Chili Deploy`
-   - **Permissions**: 
-     - `Cloudflare Pages:Edit`
-   - **Account Resources**: Include → твой аккаунт
-   - **Zone Resources**: Include → твой домен (если есть)
-4. **Continue to summary** → **Create Token**
-5. **Скопируй токен** (показывается только один раз!)
-
-### 1.4 Получить Account ID
-- На любой странице Cloudflare Dashboard → правая колонка → **Account ID**
-
----
-
-## Шаг 2: GitLab Setup (3 мин)
-
-### 2.1 Добавить переменные в CI/CD
-1. GitLab → **Settings** → **CI/CD** → **Variables** → **Add variable**
-2. Добавь 2 переменные:
-
-| Key | Value | Masked | Protected |
-|---|---|---|---|
-| `CF_ACCOUNT_ID` | Твой Account ID | ✅ | ✅ |
-| `CF_API_TOKEN` | Твой API Token | ✅ | ✅ |
-
----
-
-## Шаг 3: Первый деплой (2 мин)
-
-```bash
-git add .
-git commit -m "chore: Cloudflare Pages deploy setup"
-git push origin main
-```
-
-GitLab CI автоматически:
-1. ✅ Линтит код
-2. ✅ Собирает проект (`npm run build`)
-3. ✅ Деплоит на `https://chili-app.pages.dev`
-
-Смотри логи в GitLab → **CI/CD** → **Pipelines**
-
----
-
-## Шаг 4: Telegram Mini App Setup (5 мин)
-
-### 4.1 Создать бота
-1. Открой **@BotFather** в Telegram
-2. Отправь `/newbot`
-3. Имя: `Chili`
-4. Username: `chili_app_bot` (должно быть уникальным, придумай свой)
-5. **Сохрани BOT_TOKEN** — он выглядит как `123456789:ABCdef...`
-
-### 4.2 Создать Mini App
+Cloudflare Dashboard → Pages → chili-app → вкладка Settings.
+Раздел Environment variables → Add variable:
+Variable name: BOT_TOKEN
+Value: (Вставь сюда токен от @BotFather, например 123456789:ABCdef...)
+Выбери Encrypt и нажми Save.
+Важно: Перейди на вкладку Deployments, выбери последний деплой и нажми Retry deployment, чтобы токен применился.
+## Шаг 3: Telegram Mini App Setup
+### 3.1 Создать бота
+Открой @BotFather в Telegram → отправь /newbot.
+Имя: Chili, Username: chili_app_bot (придумай свой).
+Сохрани BOT_TOKEN.
+### 3.2 Создать Mini App
 В @BotFather:
-```
-/mybots
-→ Выбери chili_app_bot
-→ Bot Settings
-→ Menu Button
-→ Configure menu button
-→ Menu Button URL
-```
 
-Или создай отдельное приложение:
-```
 /newapp
 → Выбери chili_app_bot
 → Название: Chili
 → Описание: Досуг с друзьями, оплата криптой
-→ URL: https://chili-app.pages.dev  ← твой Cloudflare URL
+→ URL: https://chili-app.pages.dev ← твой Cloudflare URL
 → Загрузи иконку 512×512 PNG
-```
 
-### 4.3 Получить Mini App URL
-BotFather выдаст ссылку:
-```
-https://t.me/chili_app_bot/app
-```
 
-Это точка входа для пользователей.
+## ⚠️ Шаг 4: Ошибки при деплое и их решения (ТРОПА БОЛИ)
 
----
+Если ваш деплой выдает ошибку, найдите её ниже и примените фикс.
 
-## Шаг 5: Добавить BOT_TOKEN в Cloudflare (2 мин)
+### Ошибка 1: `Failed: error occurred while running deploy command`
+**Причина:** Cloudflare использует старую версию Node.js (16 или 18), а Vite 5/6 требует Node 18+.
+**Решение:** Добавить переменную `NODE_VERSION = 20` в Environment variables в настройках сборки Cloudflare (см. Шаг 1.3).
 
-### 5.1 Добавить переменную окружения
-1. Cloudflare Dashboard → **Pages** → **chili-app**
-2. **Settings** → **Environment variables**
-3. **Add variable**:
-   ```
-   Name:  BOT_TOKEN
-   Value: 123456789:ABCdef...  ← твой токен из BotFather
-   ```
-4. **Save**
-
-Теперь Cloudflare Functions (backend API) могут валидировать `initData` от Telegram.
-
----
-
-## Шаг 6: Кастомный домен (опционально, 5 мин)
-
-### 6.1 Купить/добавить домен
-1. Cloudflare Dashboard → **Pages** → **chili-app** → **Custom domains**
-2. **Set up a custom domain**
-3. Введи домен: `app.chili.io` (или любой)
-4. Cloudflare проверит DNS и выдаст SSL автоматически
-
-### 6.2 Обновить URL в BotFather
-```
-/mybots → chili_app_bot → Bot Settings → Menu Button → Configure menu button
-→ Новый URL: https://app.chili.io
-```
-
-### 6.3 Обновить tonconnect-manifest.json
-```json
-{
-  "url": "https://app.chili.io",
-  "name": "Chili",
-  "iconUrl": "https://app.chili.io/icon-256.png"
-}
-```
-
----
-
-## Шаг 7: Тестирование
-
-### 7.1 Открыть Mini App
-```
-https://t.me/chili_app_bot/app
-```
-
-Или:
-1. Найди бота `@chili_app_bot`
-2. Нажми **Start**
-3. Должна появиться кнопка **Menu** (или **Launch** если использовал `/newapp`)
-
-### 7.2 Чек-лист проверки
-- [ ] Приложение открывается без ошибок
-- [ ] Цвета подстраиваются под тему Telegram
-- [ ] Кнопка "Назад" в Telegram работает
-- [ ] Haptic feedback на кнопках (вибрация)
-- [ ] TON Connect кошелёк подключается
-- [ ] Оплата проходит (тестовая)
-- [ ] Яндекс Карты открываются
-- [ ] QR-код билета отображается
-
-### 7.3 Дебаг
-Если что-то не работает:
-1. Открой Mini App
-2. Нажми **⋮** → **Inspect Element** (на Android через Telegram Desktop)
-3. Смотри Console на ошибки
-4. Проверь Network → все запросы к `/api/*` должны возвращать 200
-
----
-
-## Структура URL
-
-| URL | Назначение |
-|---|---|
-| `https://chili-app.pages.dev` | Frontend (Vite build) |
-| `https://chili-app.pages.dev/api/auth` | Backend: валидация Telegram |
-| `https://chili-app.pages.dev/api/activities` | Backend: список активностей |
-| `https://chili-app.pages.dev/api/booking` | Backend: создание бронирования |
-| `https://t.me/chili_app_bot/app` | Точка входа для пользователей |
-
----
-
-## Полезные команды
-
+### Ошибка 2: `Missing entry-point to Worker script or to assets directory`
+**Причина:** В корне проекта лежит файл `wrangler.toml`. При автодеплое через Dashboard Cloudflare думает, что это чистый Worker, а не Pages-проект, и ищет точку входа в скрипт.
+**Решение:** Удалить `wrangler.toml` из репозитория. Cloudflare Dashboard автоматически найдет папку `/functions` для бэкенда без этого файла.
 ```bash
-# Локальная разработка
-npm run dev
+rm wrangler.toml
+git push origin main
+Ошибка 3: The version of Vite used in the project ("5.x") cannot be automatically configured. Please update the Vite version to at least "6.0.0"
+Причина: Cloudflare жестко проверяет версию Vite, если в Framework preset выбрано Vite.
+Решение (Самое простое): Зайди в Settings -> Builds & deployments -> измени Framework preset на None. Cloudflare перестанет проверять версию и просто запустит вашу команду сборки.
+Решение (Если хотите Vite 6): Обновите Vite локально npm install vite@latest --save-dev, но будьте готовы к Ошибкам 4 и 5.
 
-# Сборка
-npm run build
+Ошибка 4 (Если обновились до Vite 6): TypeError: manualChunks is not a function
+Причина: Vite 6 сменил движок сборки на Rolldown. Он не понимает manualChunks в виде объекта (как было в Vite 5), требует функцию.
+Решение: В vite.config.js перепишите блок rollupOptions.output:
 
-# Preview (как на Cloudflare)
-npm run preview
+javascript
 
-# Линтинг
-npm run lint
+// Удалите это:
+// manualChunks: { vendor: ['@telegram-apps/sdk', '@tonconnect/ui'] }
 
-# Ручной деплой через Wrangler (если нужно)
-npx wrangler pages deploy dist --project-name=chili-app
-```
+// Добавьте это (или просто удалите manualChunks полностью):
+manualChunks(id) {
+  if (id.includes('@telegram-apps/sdk') || id.includes('@tonconnect/ui')) {
+    return 'vendor';
+  }
+}
+Ошибка 5 (Если обновились до Vite 6): Cannot modify Vite config: could not find a valid plugins array
+Причина: Cloudflare пытается внедрить свои плагины в ваш vite.config.js, но если там нет массива plugins, скрипт падает.
+Решение: Добавьте пустой массив плагинов в vite.config.js:
 
----
+javascript
 
-## Что дальше?
+export default defineConfig({
+  plugins: [], // ✅ Обязательно добавьте эту строку!
+  base: '/',
+  // ... остальной код
+});
+Ошибка 6: Invalid _redirects configuration: Infinite loop detected
+Причина: Файл public/_redirects содержит правило /* /index.html 200. Новый строгий парсер Cloudflare считает это бесконечным циклом (запрос /index.html попадает под правило /* и пытается редиректить на себя).
+Решение: Удалить файл public/_redirects. Современный Cloudflare Pages автоматически понимает, что Vite-проекты — это SPA, и если файла /friends.html нет, он сам отдаст /index.html (статус 200). Роутер в JS всё сделает сам.
 
-1. ✅ Замени `EQD...` в `src/js/screens.js` на реальный адрес смарт-контракта
-2. ✅ Добавь реальные активности в `src/js/data.js` или подключи CMS
-3. ✅ Настрой аналитику (Google Analytics / Amplitude)
-4. ✅ Добавь push-уведомления через Telegram Bot API
-5. ✅ Реализуй реальный NFT mint в Cloudflare Functions
+bash
 
----
+rm public/_redirects
+git push origin main
+🔄 Как обновлять сайт в будущем?
+Благодаря подключению GitHub, деплой происходит автоматически.
+Каждый раз, когда ты меняешь код и делаешь пуш:
 
-## Поддержка
+bash
 
-- [Cloudflare Pages Docs](https://developers.cloudflare.com/pages/)
-- [Telegram Mini Apps Docs](https://core.telegram.org/bots/webapps)
-- [TON Connect Docs](https://docs.ton.org/develop/dapps/ton-connect/)
+git add .
+git commit -m "update: new feature"
+git push origin main
+Cloudflare сам заметит изменения, пересоберет проект и обновит https://chili-app.pages.dev за 1-2 минуты.
+
+Структура URL
+URL
+Назначение
+https://chili-app.pages.dev	Frontend (сайт)
+https://chili-app.pages.dev/api/auth	Backend: проверка Telegram
+https://chili-app.pages.dev/api/activities	Backend: список активностей
+https://t.me/chili_app_bot/app	Вход для пользователей
