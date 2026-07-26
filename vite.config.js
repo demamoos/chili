@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  plugins: [], // ✅ ДОБАВИЛИ ЭТУ СТРОЧКУ! Cloudflare теперь сможет внедрить свои настройки  
   base: '/',
   build: {
     outDir: 'dist',
@@ -19,7 +20,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    host: true
+    host: true  
   },
   // Cloudflare Pages specific
   preview: {
