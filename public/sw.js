@@ -1,9 +1,8 @@
 const CACHE_NAME = 'chili-v1';
 const urlsToCache = [
   '/',
-  '/index.html',
-  '/src/main.js',
-  '/src/styles/main.css'
+  '/index.html'
+  // /src/ файлы удалены, так как Vite собирает их в /assets/
 ];
 
 self.addEventListener('install', event => {
@@ -27,13 +26,24 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        if (response) return response;
-        return fetch(event.request).catch(() => {
-          return new Response('Offline mode', { status: 503 });
+  // Стратегия: Cache First для статики (/assets/), Network First для всего остального
+  if (event.request.url.includes('/assets/')) {
+    event.respondWith(
+      caches.match(event.request).then(response => {
+        return response || fetch(event.request).then(fetchResponse => {
+          return caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, fetchResponse.clone());
+            return fetchResponse;
+          });
         });
       })
-  );
+    );
+  } else {
+    // Для HTML и API идем в сеть сначала (чтобы юзеры получали свежий код)
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match('/index.html'); // Оффлайн фоллбэк для SPA
+      })
+    );
+  }
 });

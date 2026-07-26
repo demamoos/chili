@@ -11,7 +11,8 @@ export class TONConnectAdapter {
       return;
     }
     this.connector = new TonConnectUI({
-      manifestUrl: 'https://your-domain.com/tonconnect-manifest.json'
+      // ИСПРАВЛЕНО: Убрана заглушка your-domain.com, вставлен реальный URL Cloudflare
+      manifestUrl: 'https://chili-app.pages.dev/tonconnect-manifest.json'
     });
     this.connector.onStatusChange(wallet => {
       this.connected = !!wallet;

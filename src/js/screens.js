@@ -63,10 +63,16 @@ export async function authWithTelegram() {
     const initData = telegram.getInitData();
 
     if (!initData) {
-      // Fallback для тестирования вне Telegram
-      console.warn('No initData, using mock auth');
-      await mockAuth();
-      return;
+      // ИСПРАВЛЕНО: Мок-авторизация работает ТОЛЬКО на локальном компьютере!
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.warn('No initData, using mock auth on localhost');
+        await mockAuth();
+        return;
+      }
+      // На проде в Telegram initData ВСЕГДА есть. Если его нет - сайт открыли в браузере.
+      setLoading(false);
+      showToast('❌ Откройте приложение внутри Telegram');
+      return; // Блокируем вход
     }
 
     // Send initData to backend for validation
@@ -89,7 +95,7 @@ export async function authWithTelegram() {
     console.error('Auth error:', e);
     showToast('❌ Ошибка авторизации: ' + e.message);
 
-    // Fallback: skip auth
+    // Fallback: skip auth (Оставляем мок только если бэкенд лежит, для тестов)
     await mockAuth();
   }
 }
