@@ -8,26 +8,37 @@ export class APIClient {
     this.token = token;
   }
 
+  // ИСПРАВЛЕНО: Переписан метод request для максимальной надежности.
+  // Мы явно конструируем fetchOptions, чтобы исключить баги, 
+  // когда браузер может случайно сменить POST на GET.
   async request(endpoint, options = {}) {
     const url = this.baseURL + endpoint;
-    const headers = {
-      'Content-Type': 'application/json',
-      ...options.headers
+    
+    const fetchOptions = {
+      method: options.method || 'GET', // Если метод не передан, дефолт GET. Но auth передает POST!
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {}) // 安全地合并 headers
+      }
     };
 
+    // Добавляем body ТОЛЬКО если он передан (для POST запросов)
+    if (options.body) {
+      fetchOptions.body = options.body;
+    }
+
+    // Добавляем токен авторизации, если есть
     if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+      fetchOptions.headers['Authorization'] = `Bearer ${this.token}`;
     }
 
     try {
-      const response = await fetch(url, {
-        ...options,
-        headers
-      });
+      const response = await fetch(url, fetchOptions);
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || `HTTP ${response.status}`);
+        // ИСПРАВЛЕНО: Теперь мы пытаемся прочитать JSON. Если бэкенд вернул текст, не крашимся.
+        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
       return await response.json();
@@ -37,14 +48,12 @@ export class APIClient {
     }
   }
 
-  // ИСПРАВЛЕНО: Метод auth обновлен. 
-  // Теперь он принимает объект payload (initData + location + terms), 
-  // а не просто строку initData. 
-  // Явно указываем method: 'POST' чтобы избежать 405 ошибки!
+  // ИСПРАВЛЕНО: Метод auth теперь принимает объект payload 
+  // и ЖЕСТКО задает method: 'POST'
   async auth(payload) {
     const result = await this.request('/api/auth', {
-      method: 'POST', // <-- КРИТИЧЕСКИ ВАЖНО! Без этого может уйти как GET
-      body: JSON.stringify(payload) // Сериализуем весь объект { initData, location, acceptedTerms }
+      method: 'POST', // <-- КРИТИЧЕСКИ ВАЖНО!
+      body: JSON.stringify(payload) 
     });
     this.setToken(result.token);
     return result;
