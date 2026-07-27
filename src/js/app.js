@@ -69,172 +69,43 @@ const templates = {
       <div class="screen-header">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
+            <!-- ИСПРАВЛЕНО: Имя подставляется динамически, id оставлен для screens.js -->
             <div class="header-title" id="home-header-title">Привет! 👋</div>
             <div class="header-subtitle">Чем займёмся сегодня?</div>
           </div>
           <div style="display:flex; align-items:center; gap:8px; background:var(--tg-surface); padding:8px 14px; border-radius:20px; border:1px solid var(--tg-border);">
-            <span style="font-size:18px;" aria-hidden="true">💎</span>
-            <span style="font-weight:700; font-size:15px;">1,240</span>
-            <span style="font-size:12px; color:var(--tg-text-secondary);">$CHILI</span>
+            <span style="font-size:18px;" aria-hidden="true">📍</span>
+            <span id="home-user-location" style="font-size:13px; color:var(--tg-text-secondary);">Определяется...</span>
           </div>
         </div>
       </div>
-      <div class="section">
+
+      <!-- НОВОЕ: Секция Избранное (появится только если есть избранное) -->
+      <div class="section" id="favorites-section" style="display:none;">
         <div class="section-title">
-          <span aria-hidden="true">🔥</span> Друзья занимаются
-          <button class="section-link" data-action="navigate" data-screen="friends" aria-label="Показать всех друзей">Все</button>
+          <span aria-hidden="true">⭐</span> Избранное
         </div>
-        <div class="friends-strip" role="list" aria-label="Друзья онлайн">
-          <div class="friend-card" role="listitem">
-            <div class="friend-badge">LIVE</div>
-            <div class="friend-avatar" aria-hidden="true">🧑‍💻</div>
-            <div class="friend-name">Иван П.</div>
-            <div class="friend-activity">Играет в CS2 турнир<br><span style="color:var(--tg-blue-light)">сейчас</span></div>
-            <button class="join-btn" data-action="open-activity" data-id="cs2" aria-label="Присоединиться к CS2 турниру">Присоединиться</button>
-          </div>
-          <div class="friend-card" role="listitem">
-            <div class="friend-avatar" aria-hidden="true">👩‍🦰</div>
-            <div class="friend-name">Мария К.</div>
-            <div class="friend-activity">Йога в парке<br><span style="color:var(--tg-orange)">завтра 8:00</span></div>
-            <button class="join-btn" data-action="open-activity" data-id="yoga" aria-label="Присоединиться к йоге">Присоединиться</button>
-          </div>
-          <div class="friend-card" role="listitem">
-            <div class="friend-avatar" aria-hidden="true">🧔</div>
-            <div class="friend-name">Дмитрий В.</div>
-            <div class="friend-activity">Футбол<br><span style="color:var(--tg-green)">чт 19:00</span></div>
-            <button class="join-btn" data-action="open-activity" data-id="football" aria-label="Присоединиться к футболу">Присоединиться</button>
-          </div>
-          <div class="friend-card" role="listitem">
-            <div class="friend-avatar" aria-hidden="true">👱‍♀️</div>
-            <div class="friend-name">Анна С.</div>
-            <div class="friend-activity">Винная дегустация<br><span style="color:var(--tg-purple)">сб 18:00</span></div>
-            <button class="join-btn" data-action="open-activity" data-id="wine" aria-label="Присоединиться к дегустации">Присоединиться</button>
-          </div>
-        </div>
+        <div id="favorites-container" class="friends-strip"></div>
       </div>
+
       <div class="section">
         <div class="section-title" aria-hidden="true">📂 Категории</div>
-        <div class="categories-grid" role="list" aria-label="Категории активностей">
-          <button class="category-item" data-action="filter-category" data-cat="sport" role="listitem" aria-label="Фильтр: Спорт">
-            <div class="category-icon" aria-hidden="true">⚽</div>
-            <div class="category-name">Спорт</div>
-          </button>
-          <button class="category-item" data-action="filter-category" data-cat="games" role="listitem" aria-label="Фильтр: Игры">
-            <div class="category-icon" aria-hidden="true">🎮</div>
-            <div class="category-name">Игры</div>
-          </button>
-          <button class="category-item" data-action="filter-category" data-cat="edu" role="listitem" aria-label="Фильтр: Образование">
-            <div class="category-icon" aria-hidden="true">🎓</div>
-            <div class="category-name">Образование</div>
-          </button>
-          <button class="category-item" data-action="filter-category" data-cat="fun" role="listitem" aria-label="Фильтр: Развлечения">
-            <div class="category-icon" aria-hidden="true">🎭</div>
-            <div class="category-name">Развлечения</div>
-          </button>
-          <button class="category-item" data-action="filter-category" data-cat="food" role="listitem" aria-label="Фильтр: Еда">
-            <div class="category-icon" aria-hidden="true">🍷</div>
-            <div class="category-name">Еда</div>
-          </button>
-          <button class="category-item" data-action="filter-category" data-cat="online" role="listitem" aria-label="Фильтр: Онлайн">
-            <div class="category-icon" aria-hidden="true">💻</div>
-            <div class="category-name">Онлайн</div>
-          </button>
-        </div>
+        <!-- НОВОЕ: Контейнер для динамических категорий с бэкенда -->
+        <div id="categories-container" class="categories-grid" role="list" aria-label="Категории активностей"></div>
       </div>
+
       <div class="section">
         <div class="section-title">
-          <span aria-hidden="true">✨</span> Рекомендации
-          <span class="tag tag-green" aria-label="Персональные рекомендации">🔥 Персонально</span>
+          <span aria-hidden="true">✨</span> <span id="activities-title">Все мероприятия</span>
+          <button class="section-link" data-action="clear-filter" style="display:none;" aria-label="Сбросить фильтр">Все</button>
         </div>
-        <div class="activity-card" data-action="open-activity" data-id="football" tabindex="0" role="button" aria-label="Футбол с друзьями, 25 USDT">
-          <div class="activity-image" style="background: linear-gradient(135deg, #1e5128, #4e9f3d);" aria-hidden="true">
-            ⚽
-            <div class="activity-price-tag">25 USDT</div>
-          </div>
-          <div class="activity-info">
-            <div class="activity-title">Футбол с друзьями</div>
-            <div class="activity-meta">
-              <span>📍 Дубай, Al Qudra</span>
-              <span>•</span>
-              <span>чт 19:00</span>
-            </div>
-            <div style="display:flex; gap:6px; flex-wrap:wrap;">
-              <span class="tag" aria-label="Категория: Спорт">⚽ Спорт</span>
-              <span class="tag tag-green" aria-label="Есть свободные места">👥 Есть места</span>
-            </div>
-            <div class="activity-friends">
-              <div class="friend-avatars" aria-hidden="true">
-                <div class="mini-avatar">🧔</div>
-                <div class="mini-avatar">👱</div>
-                <div class="mini-avatar">🧑</div>
-              </div>
-              <span class="activity-friends-text">Дмитрий и 2 друга идут</span>
-            </div>
-          </div>
-        </div>
-        <div class="activity-card" data-action="open-activity" data-id="yoga" tabindex="0" role="button" aria-label="Утренняя йога в парке, 15 USDT">
-          <div class="activity-image" style="background: linear-gradient(135deg, #5e2d66, #9b59b6);" aria-hidden="true">
-            🧘‍♀️
-            <div class="activity-price-tag">15 USDT</div>
-          </div>
-          <div class="activity-info">
-            <div class="activity-title">Утренняя йога в парке</div>
-            <div class="activity-meta">
-              <span>📍 Стамбул, Гези</span>
-              <span>•</span>
-              <span>завтра 8:00</span>
-            </div>
-            <div style="display:flex; gap:6px; flex-wrap:wrap;">
-              <span class="tag" aria-label="Категория: Спорт">🧘‍♀️ Спорт</span>
-              <span class="tag tag-orange" aria-label="Утренняя активность">⏰ Утро</span>
-            </div>
-            <div class="activity-friends">
-              <div class="friend-avatars" aria-hidden="true">
-                <div class="mini-avatar">👩‍🦰</div>
-              </div>
-              <span class="activity-friends-text">Мария идёт — присоединяйся!</span>
-            </div>
-          </div>
-        </div>
-        <div class="activity-card" data-action="open-activity" data-id="quest" tabindex="0" role="button" aria-label="Квест Побег из Алькатраса, 40 USDT">
-          <div class="activity-image" style="background: linear-gradient(135deg, #4a1c40, #8e44ad);" aria-hidden="true">
-            🗝️
-            <div class="activity-price-tag">40 USDT</div>
-          </div>
-          <div class="activity-info">
-            <div class="activity-title">Квест «Побег из Алькатраса»</div>
-            <div class="activity-meta">
-              <span>📍 Москва, Тверская</span>
-              <span>•</span>
-              <span>сб 16:00</span>
-            </div>
-            <div style="display:flex; gap:6px; flex-wrap:wrap;">
-              <span class="tag" aria-label="Категория: Развлечения">🎭 Развлечения</span>
-              <span class="tag tag-green" aria-label="Новая активность">🆕 Новое</span>
-            </div>
-          </div>
-        </div>
-        <div class="activity-card" data-action="open-activity" data-id="nft" tabindex="0" role="button" aria-label="Вебинар NFT для начинающих, Бесплатно">
-          <div class="activity-image" style="background: linear-gradient(135deg, #1a1a2e, #16213e);" aria-hidden="true">
-            🎨
-            <div class="activity-price-tag">Бесплатно</div>
-          </div>
-          <div class="activity-info">
-            <div class="activity-title">Вебинар: NFT для начинающих</div>
-            <div class="activity-meta">
-              <span>💻 Онлайн</span>
-              <span>•</span>
-              <span>вс 15:00</span>
-            </div>
-            <div style="display:flex; gap:6px; flex-wrap:wrap;">
-              <span class="tag" aria-label="Категория: Онлайн">💻 Онлайн</span>
-              <span class="tag tag-green" aria-label="Категория: Образование">🎓 Образование</span>
-            </div>
-          </div>
-        </div>
+        <!-- НОВОЕ: Контейнер для динамических карточек активностей -->
+        <div id="activities-container" role="list" aria-label="Список активностей"></div>
       </div>
     </div>
   `,
+   
+  
 
   detail: `
     <div id="detail-screen" class="screen" role="main" aria-label="Детали активности">
@@ -759,21 +630,24 @@ function handleAction(action, data) {
     case 'go-back':
       goBack();
       break;
-    case 'open-payment':
-      openPayment();
-      router.navigate('payment');
+    // НОВОЕ: Действия для Избранного и фильтров
+    case 'add-fav':
+      toggleFavorite(data.id, true);
       break;
-    case 'select-payment':
-      selectPayment(data.type);
+    case 'remove-fav':
+      toggleFavorite(data.id, false);
       break;
-    case 'process-payment':
-      processPayment();
+    case 'clear-filter':
+      store.set('activeFilter', null);
+      renderActivities(); // Перерисовываем без фильтра
       break;
     case 'open-yandex':
       openInYandexMaps();
       break;
     case 'filter-category':
-      filterCategory(data.cat);
+      store.set('activeFilter', data.cat);
+      renderActivities(); // Перерисовываем с фильтром категории
+      telegram.haptic('light');
       break;
     case 'share-link':
       shareLink();
@@ -783,6 +657,17 @@ function handleAction(action, data) {
       break;
     case 'logout':
       logout();
+      break;
+    // Платежи пока оставляем, они не ломают приложение, но Шаг 3 мы их вырежем
+    case 'open-payment':
+      openPayment();
+      router.navigate('payment');
+      break;
+    case 'select-payment':
+      selectPayment(data.type);
+      break;
+    case 'process-payment':
+      processPayment();
       break;
   }
 }

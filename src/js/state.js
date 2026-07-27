@@ -34,6 +34,9 @@ export const store = new StateManager({
   user: null,
   wallet: null,
   history: [],
-  userCategoriesOrder: null, // Порядок категорий (для Пункта 2)
-  favorites: []              // Избранное (для Пункта 2)
+  // НОВЫЕ ПОЛЯ:
+  activities: [],       // Массив всех активностей, полученный с /api/activities
+  categories: [],       // Массив уникальных категорий (Еда, Спорт...) для фильтра
+  favorites: JSON.parse(localStorage.getItem('chili_favorites') || '[]'), // Массив ID избранных
+  activeFilter: null    // Текущий выбранный фильтр категории (null = все)
 });

@@ -3,7 +3,6 @@ import { UI } from './ui.js';
 import { telegram } from './telegram.js';
 import { tonConnect } from './tonconnect.js';
 import { api } from './api.js';
-import { activities } from './data.js'; // Временно оставляем, потом заменим на API
 
 const CONTRACT_ADDRESS = 'EQD...'; // TODO: Replace with real contract address
 
@@ -42,7 +41,7 @@ export function showScreen(screenId) {
   }
 
   const nav = UI.el('bottom-nav');
-  const hiddenScreens = ['auth', 'success', 'payment', 'detail'];
+  const hiddenScreens = ['auth', 'success', 'detail', 'payment'];
   if (hiddenScreens.includes(screenId)) {
     nav.style.display = 'none';
     telegram.showBackButton(screenId !== 'auth');
@@ -51,13 +50,9 @@ export function showScreen(screenId) {
     telegram.showBackButton(false);
   }
 
-  // ДОБАВЛЕНО: Подстановка реального имени пользователя на Home
-  if (screenId === 'home') {
-    const user = store.get('user');
-    const headerTitle = UI.el('home-header-title'); // Нам нужно добавить этот ID в HTML
-    if (headerTitle && user) {
-      headerTitle.textContent = `Привет, ${user.name}! 👋`;
-    }
+  // НОВОЕ: Если открываем Home, загружаем свежие данные с бэкенда
+  if (screenId === 'home' && store.get('isAuthenticated')) {
+    loadHomeData();
   }
 
   const navMap = { home: 0, friends: 1, profile: 2 };
@@ -146,6 +141,190 @@ export async function authWithTelegram() {
     showToast('❌ Ошибка авторизации: ' + e.message);
     telegram.haptic('heavy');
   }
+}
+
+// НОВОЕ: Загрузка данных с бэкенда при открытии Home экрана
+export async function loadHomeData() {
+  const user = store.get('user');
+  const headerTitle = UI.el('home-header-title');
+  if (headerTitle && user) {
+    headerTitle.textContent = `Привет, ${user.name}! 👋`;
+  }
+
+  // Обновляем локацию в хедере
+  const locationEl = UI.el('home-user-location');
+  const location = store.get('userLocation');
+  if (location) {
+    locationEl.textContent = 'Рядом с вами'; // В будущем можно вычислить город по координатам
+  } else {
+    locationEl.textContent = 'Весь мир';
+  }
+
+  try {
+    // Получаем активности с нашего Cloudflare Backend
+    const activitiesData = await api.getActivities();
+    store.set('activities', activitiesData);
+
+    // Вычисляем уникальные категории для фильтра
+    // Оптимальный порядок: Спорт, Развлечения, Еда, Туризм, Образование, Питомцы
+    const priorityOrder = ['Спорт', 'Развлечения', 'Еда', 'Туризм', 'Образование', 'Домашние животные'];
+    const uniqueCategories = [...new Set(activitiesData.map(a => a.yandexCategory))];
+    
+    // Сортируем категории по нашему приоритету
+    const sortedCategories = uniqueCategories.sort((a, b) => {
+      return priorityOrder.indexOf(a) - priorityOrder.indexOf(b);
+    });
+    
+    store.set('categories', sortedCategories);
+    
+    // Рендерим всё на экран
+    renderCategories();
+    renderActivities();
+    renderFavorites();
+    
+  } catch (e) {
+    console.error('Failed to load activities:', e);
+    showToast('❌ Ошибка загрузки мероприятий');
+  }
+}
+
+// НОВОЕ: Динамический рендер категорий
+function renderCategories() {
+  const container = UI.el('categories-container');
+  UI.clear(container);
+  
+  const categories = store.get('categories');
+  const emojis = { 'Спорт': '⚽', 'Развлечения': '🎮', 'Еда': '🍷', 'Туризм': '🏔️', 'Образование': '🎓', 'Домашние животные': '🐕' };
+
+  categories.forEach(cat => {
+    const item = UI.create('button', {
+      class: 'category-item',
+      'data-action': 'filter-category',
+      'data-cat': cat,
+      role: 'listitem',
+      'aria-label': `Фильтр: ${cat}`
+    }, [
+      UI.create('div', { class: 'category-icon', 'aria-hidden': 'true' }, [emojis[cat] || '📂']),
+      UI.create('div', { class: 'category-name' }, [cat])
+    ]);
+    container.appendChild(item);
+  });
+}
+
+// НОВОЕ: Динамический рендер карточек активностей
+function renderActivities() {
+  const container = UI.el('activities-container');
+  UI.clear(container);
+
+  const activities = store.get('activities');
+  const activeFilter = store.get('activeFilter');
+  const favorites = store.get('favorites');
+
+  // Фильтруем активности, если выбрана категория
+  const filtered = activeFilter ? activities.filter(a => a.yandexCategory === activeFilter) : activities;
+
+  // Обновляем заголовок секции
+  const titleEl = UI.el('activities-title');
+  const clearBtn = UI.el('clear-filter'); // Нужно добавить этот id в app.js (смотри шаг 2.2)
+  titleEl.textContent = activeFilter ? activeFilter : 'Все мероприятия';
+  clearBtn.style.display = activeFilter ? 'inline-block' : 'none';
+
+  if (filtered.length === 0) {
+    container.appendChild(UI.create('div', { style: 'text-align:center; padding:40px; color:var(--tg-text-secondary);' }, ['В этой категории пока нет мероприятий 😔']));
+    return;
+  }
+
+  filtered.forEach(activity => {
+    const isFav = favorites.includes(activity.id);
+    
+    const card = UI.create('div', { 
+      class: 'activity-card animate-in', 
+      'data-action': 'open-activity', 
+      'data-id': activity.id, 
+      tabindex: '0', 
+      role: 'button' 
+    }, [
+      UI.create('div', { class: 'activity-image', style: `background: linear-gradient(135deg, #1a1a2e, #0f3460);`, 'aria-hidden': 'true' }, [
+        activity.emoji,
+        UI.create('div', { class: 'activity-price-tag' }, [activity.currency === 'FREE' ? 'Бесплатно' : activity.price + ' ' + activity.currency]),
+        // НОВОЕ: Кнопка Избранное (звездочка) прямо на картинке
+        UI.create('button', { 
+          class: 'fav-btn', 
+          style: `position:absolute; top:12px; left:12px; background:rgba(0,0,0,0.5); border:none; border-radius:50%; width:32px; height:32px; font-size:16px; cursor:pointer; color:${isFav ? 'var(--tg-yellow)' : 'white'};`, 
+          'data-action': isFav ? 'remove-fav' : 'add-fav', 
+          'data-id': activity.id, 
+          'aria-label': isFav ? 'Убрать из избранного' : 'Добавить в избранное'
+        }, [isFav ? '⭐' : '☆'])
+      ]),
+      UI.create('div', { class: 'activity-info' }, [
+        UI.create('div', { class: 'activity-title' }, [activity.title]),
+        UI.create('div', { class: 'activity-meta' }, [
+          activity.coords ? '📍 Рядом' : '💻 Онлайн',
+          ' • ',
+          activity.subCategory
+        ]),
+        UI.create('div', { class: 'activity-friends' }, [
+          UI.create('span', { class: 'activity-friends-text', style: 'font-size:12px; color:var(--tg-blue-light);' }, 
+            activity.friends.length > 0 ? `👥 ${activity.friends.join(', ')} идут` : 'Будь первым!')
+        ])
+      ])
+    ]);
+    container.appendChild(card);
+  });
+}
+
+// НОВОЕ: Рендер Избранного (горизонтальная полоса сверху)
+function renderFavorites() {
+  const section = UI.el('favorites-section');
+  const container = UI.el('favorites-container');
+  UI.clear(container);
+
+  const favorites = store.get('favorites');
+  const activities = store.get('activities');
+
+  if (favorites.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+
+  favorites.forEach(favId => {
+    const activity = activities.find(a => a.id === favId);
+    if (!activity) return;
+
+    const card = UI.create('div', { 
+      class: 'friend-card', 
+      style: 'min-width:140px; cursor:pointer;', 
+      'data-action': 'open-activity', 
+      'data-id': activity.id, 
+      role: 'listitem' 
+    }, [
+      UI.create('div', { class: 'friend-avatar', 'aria-hidden': 'true' }, [activity.emoji]),
+      UI.create('div', { class: 'friend-name', style: 'font-size:14px;' }, [activity.title]),
+      UI.create('div', { class: 'friend-activity', style: 'font-size:12px; color:var(--tg-text-secondary);' }, [activity.yandexCategory])
+    ]);
+    container.appendChild(card);
+  });
+}
+
+// НОВОЕ: Логика добавления/удаления Избранного
+export function toggleFavorite(id, isAdd) {
+  let favorites = store.get('favorites');
+  if (isAdd) {
+    if (!favorites.includes(id)) favorites.push(id);
+    showToast('⭐ Добавлено в избранное');
+  } else {
+    favorites = favorites.filter(f => f !== id);
+    showToast('☆ Удалено из избранного');
+  }
+  store.set('favorites', favorites);
+  localStorage.setItem('chili_favorites', JSON.stringify(favorites)); // Сохраняем локально!
+  
+  // Перерисовываем карточки и избранное
+  renderActivities();
+  renderFavorites();
+  telegram.haptic('light');
 }
 
 // ===== ACTIVITY DETAIL =====
