@@ -50,10 +50,12 @@ export class APIClient {
 
   // ИСПРАВЛЕНО: Метод auth теперь принимает объект payload 
   // и ЖЕСТКО задает method: 'POST'
+  // ИСПРАВЛЕНО: Добавили слэши на конец URL, чтобы предотвратить 
+  // 301-редирект от Cloudflare, который превращает POST в GET (ошибка 405)!
   async auth(payload) {
-    const result = await this.request('/api/auth', {
-      method: 'POST', // <-- КРИТИЧЕСКИ ВАЖНО!
-      body: JSON.stringify(payload) 
+    const result = await this.request('/api/auth/', { // <-- СЛЕШ В КОНЦЕ!
+      method: 'POST',
+      body: JSON.stringify(payload)
     });
     this.setToken(result.token);
     return result;
@@ -61,17 +63,17 @@ export class APIClient {
 
   // Get activities from backend
   async getActivities() {
-    return this.request('/api/activities');
+    return this.request('/api/activities/'); // <-- СЛЕШ В КОНЦЕ!
   }
 
   // Get single activity
   async getActivity(id) {
-    return this.request(`/api/activities/${id}`);
+    return this.request(`/api/activities/${id}/`); // <-- СЛЕШ В КОНЦЕ!
   }
 
   // Create booking
   async createBooking(activityId, paymentType) {
-    return this.request('/api/booking', {
+    return this.request('/api/booking/', { // <-- СЛЕШ В КОНЦЕ!
       method: 'POST',
       body: JSON.stringify({ activityId, paymentType })
     });

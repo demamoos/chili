@@ -17,15 +17,16 @@ export async function onRequest(context) {
   }
 
   // Validate Telegram initData
-  if (url.pathname === '/api/auth') {
+  // ИСПРАВЛЕНО: Теперь проверяем pathname со слэшем и без слэша
+  if (url.pathname === '/api/auth' || url.pathname === '/api/auth/') {
     return handleAuth(request, env, corsHeaders);
   }
 
-  if (url.pathname === '/api/activities') {
+  if (url.pathname === '/api/activities' || url.pathname === '/api/activities/') {
     return handleActivities(request, corsHeaders);
   }
 
-  if (url.pathname.startsWith('/api/booking')) {
+  if (url.pathname.startsWith('/api/booking')) { // startsWith покрывает /api/booking и /api/booking/
     return handleBooking(request, env, corsHeaders);
   }
 
