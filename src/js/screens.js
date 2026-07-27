@@ -189,7 +189,7 @@ export async function loadHomeData() {
 }
 
 // НОВОЕ: Динамический рендер категорий
-function renderCategories() {
+export function renderCategories() {
   const container = UI.el('categories-container');
   UI.clear(container);
   
@@ -212,7 +212,7 @@ function renderCategories() {
 }
 
 // НОВОЕ: Динамический рендер карточек активностей
-function renderActivities() {
+export function renderActivities() {
   const container = UI.el('activities-container');
   UI.clear(container);
 
@@ -274,7 +274,7 @@ function renderActivities() {
 }
 
 // НОВОЕ: Рендер Избранного (горизонтальная полоса сверху)
-function renderFavorites() {
+export function renderFavorites() {
   const section = UI.el('favorites-section');
   const container = UI.el('favorites-container');
   UI.clear(container);
