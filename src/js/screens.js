@@ -3,9 +3,29 @@ import { UI } from './ui.js';
 import { telegram } from './telegram.js';
 import { tonConnect } from './tonconnect.js';
 import { api } from './api.js';
-import { activities } from './data.js';
+import { activities } from './data.js'; // Временно оставляем, потом заменим на API
 
 const CONTRACT_ADDRESS = 'EQD...'; // TODO: Replace with real contract address
+
+// ДОБАВЛЕНО: Проверка авто-входа при старте приложения
+export function checkAutoAuth() {
+  const savedToken = localStorage.getItem('chili_jwt');
+  if (savedToken) {
+    // Токен есть, восстанавливаем сессию без показа экрана Auth
+    api.setToken(savedToken);
+    const savedUser = JSON.parse(localStorage.getItem('chili_user') || 'null');
+    if (savedUser) {
+      store.set('user', savedUser);
+      store.set('isAuthenticated', true);
+      showScreen('home');
+      setNavActive(0);
+      return true;
+    }
+  }
+  // Токена нет, показываем Auth
+  showScreen('auth');
+  return false;
+}
 
 export function showScreen(screenId) {
   const history = store.get('history');
@@ -29,6 +49,15 @@ export function showScreen(screenId) {
   } else {
     nav.style.display = 'flex';
     telegram.showBackButton(false);
+  }
+
+  // ДОБАВЛЕНО: Подстановка реального имени пользователя на Home
+  if (screenId === 'home') {
+    const user = store.get('user');
+    const headerTitle = UI.el('home-header-title'); // Нам нужно добавить этот ID в HTML
+    if (headerTitle && user) {
+      headerTitle.textContent = `Привет, ${user.name}! 👋`;
+    }
   }
 
   const navMap = { home: 0, friends: 1, profile: 2 };
@@ -55,63 +84,68 @@ export function goBack() {
 }
 
 // ===== AUTH WITH TELEGRAM initData =====
+// ИСПРАВЛЕНО: Полностью переписана авторизация
 export async function authWithTelegram() {
+  const termsCheckbox = UI.el('terms-checkbox');
+  
+  // 1. Проверка согласия с правилами
+  if (!termsCheckbox || !termsCheckbox.checked) {
+    showToast('❌ Пожалуйста, примите условия использования');
+    telegram.haptic('heavy'); // Жесткая вибрация за ошибку
+    return;
+  }
+
   showToast('✈️ Авторизация через Telegram...');
   setLoading(true);
 
   try {
+    // 2. Запрос геолокации (не блокирует вход, если отказали)
+    const location = await telegram.requestGeolocation();
+    store.set('userLocation', location);
+
+    // 3. Получение initData
     const initData = telegram.getInitData();
 
     if (!initData) {
-      // ИСПРАВЛЕНО: Мок-авторизация работает ТОЛЬКО на локальном компьютере!
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        console.warn('No initData, using mock auth on localhost');
-        await mockAuth();
-        return;
-      }
-      // На проде в Telegram initData ВСЕГДА есть. Если его нет - сайт открыли в браузере.
+      // На проде в Telegram initData ВСЕГДА есть. Если нет - открыли вне TG
       setLoading(false);
       showToast('❌ Откройте приложение внутри Telegram');
-      return; // Блокируем вход
+      return; 
     }
-
-    // Send initData to backend for validation
-    const result = await api.auth(initData);
-
-    const user = telegram.getUser();
-    store.set('user', { 
-      name: user?.first_name || 'Пользователь', 
-      id: user?.id?.toString() || 'tg_user',
-      username: user?.username 
+    // 4. Отправка на бэкенд для валидации
+    // ИСПРАВЛЕНО: Передаем на бэкенд не только initData, но и локацию, и статус согласия
+    const result = await api.auth({
+      initData: initData,
+      location: store.get('userLocation'), 
+      acceptedTerms: true // Если мы дошли сюда, значит чекбокс нажат
     });
+    
+    api.setToken(result.token); // Сохраняем токен в API клиент
 
+    // 5. Сохранение в LocalStorage для авто-входа
+    localStorage.setItem('chili_jwt', result.token);
+
+    // ИСПРАВЛЕНО: Бэкенд теперь возвращает реального юзера! Берем данные оттуда (самый надежный источник)
+    const userData = { 
+      name: result.user?.first_name || 'Пользователь', 
+      id: result.user?.id?.toString() || 'tg_user',
+      username: result.user?.username 
+    };
+    // 6. Успешный вход
+    store.set('isAuthenticated', true);
+    store.set('acceptedTerms', true);
     setLoading(false);
     showScreen('home');
     setNavActive(0);
-    showToast(`✅ Добро пожаловать, ${user?.first_name || 'друг'}!`);
-    telegram.setMainButton('Забронировать', false, () => {});
+    showToast(`✅ Добро пожаловать, ${userData.name}!`);
+    telegram.haptic('success');
+
   } catch (e) {
     setLoading(false);
     console.error('Auth error:', e);
     showToast('❌ Ошибка авторизации: ' + e.message);
-
-    // Fallback: skip auth (Оставляем мок только если бэкенд лежит, для тестов)
-    await mockAuth();
+    telegram.haptic('heavy');
   }
-}
-
-async function mockAuth() {
-  store.set('user', { name: 'Савва', id: 'tg_123' });
-  setLoading(false);
-  showScreen('home');
-  setNavActive(0);
-  showToast('✅ Добро пожаловать!');
-}
-
-export function skipAuth() {
-  store.set('user', { name: 'Гость', id: 'guest' });
-  showScreen('home');
-  setNavActive(0);
 }
 
 // ===== ACTIVITY DETAIL =====
@@ -339,7 +373,13 @@ export function logout() {
   store.set('user', null);
   store.set('wallet', null);
   store.set('history', []);
+  store.set('isAuthenticated', false);
   api.setToken(null);
+
+  // ИСПРАВЛЕНО: Очищаем localStorage, чтобы авто-вход не залогинивал снова
+  localStorage.removeItem('chili_jwt');
+  localStorage.removeItem('chili_user');
+
   showScreen('auth');
   showToast('👋 Вы вышли из аккаунта');
 }

@@ -4,7 +4,7 @@ import { telegram } from './telegram.js';
 import { tonConnect } from './tonconnect.js';
 import { UI } from './ui.js';
 import {
-  showScreen, setNavActive, goBack, authWithTelegram, skipAuth,
+  showScreen, setNavActive, goBack, authWithTelegram, // ✅ skipAuth убрана из импортов
   openActivity, openInYandexMaps, openPayment, selectPayment,
   processPayment, filterCategory, shareLink, shareInvite, logout,
   showToast, setLoading
@@ -21,13 +21,23 @@ const templates = {
         <span class="logo-emoji" aria-hidden="true">❄️</span>
       </div>
       <h1 class="auth-title">Chili</h1>
-      <p class="auth-subtitle">Найди свой досуг. Оплати криптой или картой. Делай это с друзьями из Telegram.</p>
+      <p class="auth-subtitle">Найди свой досуг. Делай это с друзьями из Telegram.</p>
+      
+      <!-- ИСПРАВЛЕНО: Добавлен чекбокс для соглашения на обработку данных -->
+      <div style="width:100%; margin-bottom:20px; display:flex; align-items:flex-start; gap:12px; padding:0 10px;">
+        <input type="checkbox" id="terms-checkbox" style="width:20px; height:20px; margin-top:2px; accent-color:var(--tg-blue); cursor:pointer;" aria-label="Согласие с правилами">
+        <label for="terms-checkbox" style="font-size:13px; color:var(--tg-text-secondary); line-height:1.4; cursor:pointer;">
+          Я соглашаюсь с <a href="https://chili-app.pages.dev/terms" target="_blank" style="color:var(--tg-blue-light); text-decoration:underline;">условиями использования</a> 
+          и <a href="https://chili-app.pages.dev/privacy" target="_blank" style="color:var(--tg-blue-light); text-decoration:underline;">политикой конфиденциальности</a>, 
+          включая обработку моей геолокации для поиска мероприятий рядом.
+        </label>
+      </div>
+
+      <!-- ИСПРАВЛЕНО: Убрана кнопка "Гостевой вход". Вход только через TG -->
       <button class="btn btn-primary" data-action="auth-telegram" aria-label="Войти через Telegram">
         <span aria-hidden="true">✈️</span> Войти через Telegram
       </button>
-      <button class="btn btn-secondary" data-action="skip-auth" aria-label="Продолжить как гость">
-        Продолжить как гость
-      </button>
+      
       <div class="features-list">
         <div class="feature-item animate-in delay-1">
           <span class="feature-icon" aria-hidden="true">⚽</span>
@@ -44,10 +54,10 @@ const templates = {
           </div>
         </div>
         <div class="feature-item animate-in delay-3">
-          <span class="feature-icon" aria-hidden="true">💳</span>
+          <span class="feature-icon" aria-hidden="true">📍</span>
           <div class="feature-text">
-            <strong>Оплата криптой или картой</strong>
-            USDT, TON, $CHILI, а также банковская карта (RUB/USD)
+            <strong>Мероприятия рядом</strong>
+            Мы найдем лучшие активности ближе к вам
           </div>
         </div>
       </div>
@@ -59,7 +69,7 @@ const templates = {
       <div class="screen-header">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <div class="header-title">Привет, Савва! 👋</div>
+            <div class="header-title" id="home-header-title">Привет! 👋</div>
             <div class="header-subtitle">Чем займёмся сегодня?</div>
           </div>
           <div style="display:flex; align-items:center; gap:8px; background:var(--tg-surface); padding:8px 14px; border-radius:20px; border:1px solid var(--tg-border);">
@@ -737,9 +747,6 @@ function handleAction(action, data) {
   switch (action) {
     case 'auth-telegram':
       authWithTelegram();
-      break;
-    case 'skip-auth':
-      skipAuth();
       break;
     case 'navigate':
       showScreen(data.screen);

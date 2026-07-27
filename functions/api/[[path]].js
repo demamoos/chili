@@ -37,7 +37,18 @@ async function handleAuth(request, env, corsHeaders) {
     return new Response('Method not allowed', { status: 405, headers: corsHeaders });
   }
 
-  const { initData } = await request.json();
+  // ИСПРАВЛЕНО: Теперь мы читаем не только initData, но и location/acceptedTerms
+  const body = await request.json();
+  const { initData, location, acceptedTerms } = body;
+
+  // ДОБАВЛЕНО: Строгая проверка на сервере! Если юзер не принял правила — доступ запрещен.
+  // Даже если он каким-то чудом нажал кнопку "Войти" без чекбокса на фронте, бэкенд его отбросит.
+  if (!acceptedTerms) {
+    return new Response(JSON.stringify({ error: 'Terms of service not accepted' }), {
+      status: 403, // 403 Forbidden — запрет доступа
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
 
   // Validate initData signature
   const isValid = await validateInitData(initData, env.BOT_TOKEN);
@@ -48,19 +59,48 @@ async function handleAuth(request, env, corsHeaders) {
     });
   }
 
-  // Generate JWT (simplified — в production используй jose или аналог)
-  const token = btoa(JSON.stringify({ user: 'savva', exp: Date.now() + 86400000 }));
+  // ИСПРАВЛЕНО: Извлекаем РЕАЛЬНЫЕ данные пользователя из initData вместо хардкода 'savva'
+  // initData приходит как query string, нам нужно достать параметр "user"
+  const urlParams = new URLSearchParams(initData);
+  const userJsonStr = urlParams.get('user');
+  const telegramUser = JSON.parse(userJsonStr || '{}');
 
-  return new Response(JSON.stringify({ token }), {
+  // Generate JWT (simplified — в production используй jose или аналог)
+  // Теперь токен содержит настоящий Telegram ID и имя!
+  const tokenPayload = { 
+    userId: telegramUser.id, 
+    userName: telegramUser.first_name, 
+    location: location, // Сохраняем геолокацию в токен (или в базу данных в будущем)
+    exp: Date.now() + 86400000 
+  };
+  const token = btoa(JSON.stringify(tokenPayload));
+
+  // ДОБАВЛЕНО: Возвращаем объект пользователя на фронтенд, чтобы фронт сразу мог подставить имя
+  return new Response(JSON.stringify({ token, user: telegramUser }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
 }
 
+
 async function handleActivities(request, corsHeaders) {
+  // ИСПРАВЛЕНО: Структура активностей переработана под Яндекс.Категории
+  // Добавлены: Еда, Туризм, Развлечения, Образование, Спорт, Домашние животные
+  // Каждая активность теперь содержит yandexCategory и subCategory
   const activities = [
-    { id: 'football', title: 'Футбол', price: 25, currency: 'USDT' },
-    { id: 'yoga', title: 'Йога', price: 15, currency: 'USDT' },
-    { id: 'quest', title: 'Квест', price: 40, currency: 'USDT' },
+    // СПОРТ
+    { id: 'football', title: 'Футбол с друзьями', yandexCategory: 'Спорт', subCategory: 'Командный спорт', price: 0, currency: 'FREE', emoji: '⚽', coords: '24.8466,55.3606', friends: ['Дмитрий'] },
+    { id: 'yoga', title: 'Утренняя йога в парке', yandexCategory: 'Спорт', subCategory: 'Фитнес и йога', price: 0, currency: 'FREE', emoji: '🧘‍♀️', coords: '41.0378,28.9853', friends: ['Мария'] },
+    // РАЗВЛЕЧЕНИЯ
+    { id: 'quest', title: 'Квест «Побег из Алькатраса»', yandexCategory: 'Развлечения', subCategory: 'Квесты', price: 0, currency: 'FREE', emoji: '🗝️', coords: '55.7614,37.6041', friends: [] },
+    { id: 'cs2', title: 'CS2 Турнир «Crypto Cup»', yandexCategory: 'Развлечения', subCategory: 'Игры и турниры', price: 0, currency: 'FREE', emoji: '🎮', coords: null, friends: ['Иван'] },
+    // ЕДА
+    { id: 'wine', title: 'Винная дегустация', yandexCategory: 'Еда', subCategory: 'Дегустации и рестораны', price: 0, currency: 'FREE', emoji: '🍷', coords: '25.0772,55.1334', friends: ['Анна'] },
+    // ОБРАЗОВАНИЕ
+    { id: 'nft', title: 'Вебинар: NFT для начинающих', yandexCategory: 'Образование', subCategory: 'Вебинары и курсы', price: 0, currency: 'FREE', emoji: '🎨', coords: null, friends: [] },
+    // ТУРИЗМ
+    { id: 'hiking', title: 'Поход в горы Аль-Айн', yandexCategory: 'Туризм', subCategory: 'Экскурсии и походы', price: 0, currency: 'FREE', emoji: '🏔️', coords: '24.1935,55.7584', friends: [] },
+    // ДОМАШНИЕ ЖИВОТНЫЕ
+    { id: 'dog_park', title: 'Встреча собаководов в парке', yandexCategory: 'Домашние животные', subCategory: 'Дог-парки и выставки', price: 0, currency: 'FREE', emoji: '🐕', coords: '25.2100,55.2700', friends: [] }
   ];
 
   return new Response(JSON.stringify(activities), {
@@ -68,6 +108,7 @@ async function handleActivities(request, corsHeaders) {
   });
 }
 
+// ИСПРАВЛЕНО: Бронирование теперь БЕСПЛАТНОЕ (Free NFT)
 async function handleBooking(request, env, corsHeaders) {
   if (request.method !== 'POST') {
     return new Response('Method not allowed', { status: 405, headers: corsHeaders });
@@ -75,11 +116,13 @@ async function handleBooking(request, env, corsHeaders) {
 
   const body = await request.json();
 
-  // В production: создать платёж, mint NFT, отправить уведомление
+  // Создаем бесплатный NFT билет (мок)
   const booking = {
     id: 'nft_' + Date.now(),
     status: 'confirmed',
-    txHash: 'mock_' + crypto.randomUUID(),
+    txHash: 'free_mock_' + crypto.randomUUID(), // Мок хэш, реальной транзакции нет
+    paymentType: 'free_nft',
+    yandexCategory: body.yandexCategory || 'Спорт',
     ...body
   };
 
@@ -87,6 +130,8 @@ async function handleBooking(request, env, corsHeaders) {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
 }
+
+// ... (validateInitData остается как была) ...
 
 async function validateInitData(initData, botToken) {
   // HMAC-SHA256 validation

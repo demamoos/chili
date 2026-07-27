@@ -27,6 +27,31 @@ export class TelegramAdapter {
   getUser() {
     return this.tg?.initDataUnsafe?.user || null;
   }
+// ДОБАВЛЕНО: Метод запроса геолокации
+  // Используем стандартный Web API, так как TG SDK не имеет своего метода
+  // Возвращает Promise, чтобы мы могли дождаться ответа юзера
+  requestGeolocation() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        console.warn('Geolocation is not supported by this browser.');
+        resolve(null); // Не падаем, просто возвращаем null
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.warn('Geolocation error:', error.message);
+          resolve(null); // Если юзер отказал или ошибка — не блокируем вход, просто null
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    });
+  }
 
   applyTheme() {
     if (!this.tg) return;

@@ -23,11 +23,17 @@ export class StateManager {
   }
 }
 
+// ИСПРАВЛЕНО: Добавлены поля для авторизации, локации и настроек юзера
 export const store = new StateManager({
-  currentScreen: 'auth',
+  currentScreen: 'auth', // Начинаем с авторизации
+  isAuthenticated: false, // Флаг реальной авторизации
+  acceptedTerms: false,   // Согласие с правилами
+  userLocation: null,     // Координаты { lat, lng }
   selectedActivity: null,
-  selectedPayment: 'usdt',
+  selectedPayment: 'free_nft', // Платежи убраны, тип по умолчанию бесплатный
   user: null,
   wallet: null,
-  history: []
+  history: [],
+  userCategoriesOrder: null, // Порядок категорий (для Пункта 2)
+  favorites: []              // Избранное (для Пункта 2)
 });
