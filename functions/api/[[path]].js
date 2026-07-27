@@ -33,8 +33,13 @@ export async function onRequest(context) {
 }
 
 async function handleAuth(request, env, corsHeaders) {
+ // ИСПРАВЛЕНО: Временно добавили логирование метода прямо в ошибку!
+  // Если ошибка появится, мы УВИДИМ какой метод пришел: GET, OPTIONS или что-то еще.
   if (request.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405, headers: corsHeaders });
+    return new Response(JSON.stringify({ error: `Method not allowed. Received: ${request.method}` }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 
   // ИСПРАВЛЕНО: Теперь мы читаем не только initData, но и location/acceptedTerms
