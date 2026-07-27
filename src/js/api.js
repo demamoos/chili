@@ -37,11 +37,14 @@ export class APIClient {
     }
   }
 
-  // Auth with Telegram initData
-  async auth(initData) {
+  // ИСПРАВЛЕНО: Метод auth обновлен. 
+  // Теперь он принимает объект payload (initData + location + terms), 
+  // а не просто строку initData. 
+  // Явно указываем method: 'POST' чтобы избежать 405 ошибки!
+  async auth(payload) {
     const result = await this.request('/api/auth', {
-      method: 'POST',
-      body: JSON.stringify({ initData })
+      method: 'POST', // <-- КРИТИЧЕСКИ ВАЖНО! Без этого может уйти как GET
+      body: JSON.stringify(payload) // Сериализуем весь объект { initData, location, acceptedTerms }
     });
     this.setToken(result.token);
     return result;
