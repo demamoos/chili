@@ -1,13 +1,16 @@
 import { router } from './router.js';
 import { store } from './state.js';
+// ДОБАВЛЕНО: Импорт telegram нужен для вызова telegram.haptic() внутри handleAction
 import { telegram } from './telegram.js';
-import { tonConnect } from './tonconnect.js';
 import { UI } from './ui.js';
 import {
-  showScreen, setNavActive, goBack, authWithTelegram, // ✅ skipAuth убрана из импортов
+  showScreen, setNavActive, goBack, authWithTelegram,
   openActivity, openInYandexMaps, openPayment, selectPayment,
   processPayment, filterCategory, shareLink, shareInvite, logout,
-  showToast, setLoading
+  showToast, setLoading,
+  // ДОБАВЛЕНО: Новые функции для Шага 2 (Избранное и динамический рендер)
+  toggleFavorite, 
+  renderActivities
 } from './screens.js';
 
 // Make showToast globally available for TON Connect adapter
