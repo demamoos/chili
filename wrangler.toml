@@ -1,0 +1,13 @@
+name = "chili-app"
+compatibility_date = "2024-01-01"
+
+[assets]
+directory = "./dist"
+
+# ИСПРАВЛЕНО: Убираем слэши на конце URL (Drop trailing slash).
+# Это предотвращает баг: Cloudflare делает 301-редирект (добавляя слэш), 
+# браузер меняет POST на GET, и мы получаем 405!
+html_handling = "drop-trailing-slash"
+
+# SPA Fallback: если файла нет, отдаем index.html (чтобы работал наш роутер)
+not_found_handling = "single-page-application"
