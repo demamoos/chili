@@ -17,12 +17,19 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
-    // 2. API Routes (Наш бэкенд)
+    // 2. ТЕСТОВЫЙ ЭНДПОИНТ (Чтобы проверить, жив ли Worker)
+    if (url.pathname === '/api/ping' || url.pathname === '/api/ping/') {
+      return new Response(JSON.stringify({ status: 'ok', message: 'Worker is alive!' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // 3. API Routes (Наш бэкенд)
     if (url.pathname.startsWith('/api/')) {
       return handleApiRequest(request, env, url);
     }
 
-    // 3. Static Assets (Frontend из папки dist)
+    // 4. Static Assets (Frontend из папки dist)
     // Если запрос не к API, мы просим Cloudflare отдать статику
     // (index.html, JS, CSS). Это заменяет SPA fallback.
     return env.ASSETS.fetch(request);

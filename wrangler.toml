@@ -11,3 +11,8 @@ html_handling = "drop-trailing-slash"
 
 # SPA Fallback: если файла нет, отдаем index.html (чтобы работал наш роутер)
 not_found_handling = "single-page-application"
+
+# ИСПРАВЛЕНО: КРИТИЧЕСКАЯ НАСТРОЙКА!
+# Заставляет Cloudflare запускать наш worker.js ДО того, как сервер статики попробует отдать файлы.
+# Только так наш бэкенд перехватит POST /api/auth до того, как статики вернет 405!
+run_worker_first = true
